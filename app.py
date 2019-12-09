@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route('/')
 
 def hello():
-    target = os.environ.get('TARGET', 'ModusMitch')
+    target = os.environ.get('TARGET', 'Le Monde est A Moi!!!')
     return 'Hello {}!'.format(target)
 
 if __name__ == "__main__":
