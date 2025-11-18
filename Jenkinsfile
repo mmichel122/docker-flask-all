@@ -3,8 +3,8 @@ pipeline {
 
   environment {
     AWS_REGION = "us-east-1"
-    IMAGE_NAME = "jenkins-demo"
-    REPO_URI = "471112679140.dkr.ecr.us-east-1.amazonaws.com/mlops/demo"
+    IMAGE_NAME = "flask-api-demo"
+    REPO_URI = "637423311003.dkr.ecr.us-east-1.amazonaws.com/mlops/demo"
   }
 
   stages {
