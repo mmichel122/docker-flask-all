@@ -2,11 +2,11 @@ pipeline {
   agent any
 
   environment {
-    DOCKER_CREDS = credentials('dockerhub-credentials')  
-    K3S_KUBECONFIG = credentials('k3s-kubeconfig')
-    IMAGE_NAME = "flask-api-demo"
-    REPO_URI = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
-    K8S_NAMESPACE = "demo"
+    DOCKER_CREDS        = credentials('dockerhub-credentials')  
+    K3S_KUBECONFIG_B64  = credentials('k3s-kubeconfig-b64')
+    IMAGE_NAME          = "flask-api-demo"
+    REPO_URI            = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
+    K8S_NAMESPACE       = "demo"
   }
 
   stages {
