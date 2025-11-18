@@ -36,8 +36,8 @@ pipeline {
     stage('Deploy to k3s') {
       steps {
         sh """
-          echo "Using kubeconfig from Jenkins secrets..."
-          export KUBECONFIG=${K3S_KUBECONFIG}
+          echo "$K3S_KUBECONFIG_B64" | base64 --decode > k3s.yaml
+          export KUBECONFIG=$PWD/k3s.yaml
 
           kubectl apply -f k8s/
           
