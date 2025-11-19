@@ -15,10 +15,6 @@ pipeline {
 
   stages {
 
-    stage('Checkout') {
-      steps { checkout scm }
-    }
-
     stage('Load kubeconfig') {
       steps {
         withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
