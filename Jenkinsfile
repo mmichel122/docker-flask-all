@@ -54,16 +54,28 @@ pipeline {
     stage('Deploy to k3s') {
       steps {
         withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
-          sh """
-            cp "\$KCFG" ${K3S_CONFIG_FILE}
-            export KUBECONFIG=${K3S_CONFIG_FILE}
+          sh '''
+            echo "Using kubeconfig..."
+            cp "$KCFG" k3s.yaml
+            chmod 600 k3s.yaml
+            export KUBECONFIG=k3s.yaml
 
+            echo "Applying namespace..."
+            kubectl apply -f k8s/namespace.yaml
+
+            echo "Waiting for namespace to be ready..."
+            kubectl wait --for=condition=Established \
+              --timeout=10s \
+              namespace/demo || true
+
+            echo "Applying remaining manifests..."
             kubectl apply -f k8s/
 
+            echo "Updating deployment image..."
             kubectl set image deployment/flask-api \
               flask-api=${REPO_URI}:${GIT_COMMIT} \
-              -n ${K8S_NAMESPACE}
-          """
+              -n demo
+          '''
         }
       }
     }
