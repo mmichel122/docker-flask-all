@@ -48,6 +48,7 @@ pipeline {
       steps {
         sh """
           echo "Running smoke tests..."
+          export KUBECONFIG=${K3S_CONFIG_FILE}
           kubectl -n ${K8S_NAMESPACE} run smoke-test --rm -i --restart=Never \
             --image=curlimages/curl \
             -- curl -f http://flask-api-svc:8080/
