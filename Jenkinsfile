@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     DOCKER_CREDS   = credentials('dockerhub-credentials')
-    K3S_FILE       = credentials('k3s-kubeconfig')   // Secret file
+    K3S_CONFIG_FILE = 'k3s.yaml'
     IMAGE_NAME     = "flask-api-demo"
     REPO_URI       = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
     K8S_NAMESPACE  = "demo"
@@ -12,24 +12,39 @@ pipeline {
   stages {
 
     stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Prepare kubeconfig') {
       steps {
-        checkout scm
+        echo "Loading kubeconfig from Jenkins credentials..."
+
+        // Correct way: use file credential → Jenkins copies actual file
+        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
+          sh """
+            cp "\$KCFG" ${K3S_CONFIG_FILE}
+            chmod 600 ${K3S_CONFIG_FILE}
+            export KUBECONFIG=${K3S_CONFIG_FILE}
+
+            echo 'Testing kubeconfig...'
+            kubectl config get-contexts
+          """
+        }
       }
     }
 
-    stage('Build & Push to Docker Hub') {
+    stage('Build & Push Docker image') {
       steps {
-        sh """#!/bin/bash
+        sh """
           echo "Logging in to Docker Hub..."
-          echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin
+          echo "${DOCKER_CREDS_PSW}" | docker login -u "${DOCKER_CREDS_USR}" --password-stdin
 
           docker buildx create --use || true
 
-          echo "Building and pushing image..."
           docker buildx build \
             --platform linux/amd64 \
-            -t "$REPO_URI:$GIT_COMMIT" \
-            -t "$REPO_URI:latest" \
+            -t ${REPO_URI}:${GIT_COMMIT} \
+            -t ${REPO_URI}:latest \
             --push .
         """
       }
@@ -38,20 +53,15 @@ pipeline {
     stage('Deploy to k3s') {
       steps {
         withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
-          sh """#!/bin/bash
-            echo "Using kubeconfig from Jenkins credentials..."
-            export KUBECONFIG="$KCFG"
+          sh """
+            cp "\$KCFG" ${K3S_CONFIG_FILE}
+            export KUBECONFIG=${K3S_CONFIG_FILE}
 
-            echo "Testing KUBECONFIG..."
-            kubectl config get-contexts || exit 1
-
-            echo "Applying manifests..."
             kubectl apply -f k8s/
 
-            echo "Updating deployment image..."
             kubectl set image deployment/flask-api \
-              flask-api="$REPO_URI:$GIT_COMMIT" \
-              -n "$K8S_NAMESPACE"
+              flask-api=${REPO_URI}:${GIT_COMMIT} \
+              -n ${K8S_NAMESPACE}
           """
         }
       }
