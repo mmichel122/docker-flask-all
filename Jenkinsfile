@@ -27,6 +27,7 @@ pipeline {
             export KUBECONFIG=${K3S_CONFIG_FILE}
 
             echo 'Testing kubeconfig...'
+            cat ${K3S_CONFIG_FILE}
             kubectl config get-contexts
           """
         }
