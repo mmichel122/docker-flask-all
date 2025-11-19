@@ -2,10 +2,11 @@ pipeline {
   agent any
 
   environment {
-    DOCKER_CREDS = credentials('dockerhub-credentials')
-    IMAGE_NAME   = "flask-api-demo"
-    REPO_URI     = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
-    K8S_NAMESPACE = "demo"
+    DOCKER_CREDS   = credentials('dockerhub-credentials')
+    K3S_FILE       = credentials('k3s-kubeconfig')   // Secret file
+    IMAGE_NAME     = "flask-api-demo"
+    REPO_URI       = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
+    K8S_NAMESPACE  = "demo"
   }
 
   stages {
@@ -18,7 +19,7 @@ pipeline {
 
     stage('Build & Push to Docker Hub') {
       steps {
-        sh '''
+        sh """#!/bin/bash
           echo "Logging in to Docker Hub..."
           echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin
 
@@ -27,33 +28,31 @@ pipeline {
           echo "Building and pushing image..."
           docker buildx build \
             --platform linux/amd64 \
-            -t '${REPO_URI}:'"$GIT_COMMIT" \
-            -t '${REPO_URI}:latest' \
+            -t "$REPO_URI:$GIT_COMMIT" \
+            -t "$REPO_URI:latest" \
             --push .
-        '''
+        """
       }
     }
 
     stage('Deploy to k3s') {
       steps {
-        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'K3S_FILE')]) {
-          sh '''
+        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
+          sh """#!/bin/bash
             echo "Using kubeconfig from Jenkins credentials..."
+            export KUBECONFIG="$KCFG"
 
-            # No Groovy interpolation → very important
-            export KUBECONFIG="$K3S_FILE"
-
-            echo "Verifying Kubernetes context..."
-            kubectl config current-context || true
+            echo "Testing KUBECONFIG..."
+            kubectl config get-contexts || exit 1
 
             echo "Applying manifests..."
             kubectl apply -f k8s/
 
-            echo "Updating image..."
+            echo "Updating deployment image..."
             kubectl set image deployment/flask-api \
-              flask-api='${REPO_URI}:'"$GIT_COMMIT" \
-              -n '${K8S_NAMESPACE}'
-          '''
+              flask-api="$REPO_URI:$GIT_COMMIT" \
+              -n "$K8S_NAMESPACE"
+          """
         }
       }
     }
