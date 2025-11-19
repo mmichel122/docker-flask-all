@@ -14,4 +14,20 @@ spec:
       protocol: TCP
   selector:
     app: flask-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-api-svc
+  namespace: demo
+  labels:
+    app: flask-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080          # Service port inside the cluster
+      targetPort: 8080  # Container port
+      protocol: TCP
+  selector:
+    app: flask-api
 
