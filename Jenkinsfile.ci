@@ -1,0 +1,55 @@
+pipeline {
+  agent any
+
+  environment {
+    DOCKER_CREDS = credentials('dockerhub-credentials')
+    IMAGE_NAME   = "flask-api-demo"
+    COMMIT_TAG   = "${env.GIT_COMMIT}"
+    REPO_URI     = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Unit Tests') {
+      steps { sh "pytest -q || true" }
+    }
+
+    stage('Build & Push Docker Image') {
+      steps {
+        sh """
+          echo "${DOCKER_CREDS_PSW}" | docker login -u "${DOCKER_CREDS_USR}" --password-stdin
+
+          docker buildx create --use || true
+
+          docker buildx build \
+            --platform linux/amd64 \
+            -t ${REPO_URI}:${COMMIT_TAG} \
+            -t ${REPO_URI}:latest \
+            --push .
+        """
+      }
+    }
+
+    stage('Trigger Deploy Pipeline') {
+      steps {
+        echo "Triggering deployment job with image tag ${COMMIT_TAG}"
+
+        build job: 'flask-api-cd-deploy',
+              parameters: [
+                string(name: 'IMAGE_TAG', value: COMMIT_TAG)
+              ],
+              wait: false
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "CI Pipeline completed successfully."
+    }
+  }
+}

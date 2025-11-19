@@ -1,0 +1,71 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Image tag to deploy')
+  }
+
+  environment {
+    K8S_NAMESPACE   = "demo"
+    IMAGE_NAME      = "flask-api-demo"
+    DOCKER_CREDS    = credentials('dockerhub-credentials')
+    REPO_URI        = "docker.io/${DOCKER_CREDS_USR}/${IMAGE_NAME}"
+    K3S_CONFIG_FILE = "k3s.yaml"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Load kubeconfig') {
+      steps {
+        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
+          sh """
+            cp "$KCFG" ${K3S_CONFIG_FILE}
+            chmod 600 ${K3S_CONFIG_FILE}
+            export KUBECONFIG=${K3S_CONFIG_FILE}
+            kubectl get nodes
+          """
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh """
+          export KUBECONFIG=${K3S_CONFIG_FILE}
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/
+
+          kubectl set image deployment/flask-api \
+            flask-api=${REPO_URI}:${IMAGE_TAG} \
+            -n ${K8S_NAMESPACE}
+
+          kubectl rollout status deployment/flask-api -n ${K8S_NAMESPACE} --timeout=60s
+        """
+      }
+    }
+
+    stage('Smoke Tests') {
+      steps {
+        sh """
+          echo "Running smoke tests..."
+          kubectl -n ${K8S_NAMESPACE} run smoke-test --rm -i --restart=Never \
+            --image=curlimages/curl \
+            -- curl -f http://flask-api-svc:8080/
+        """
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Deployment successful and smoke tests passed."
+    }
+    failure {
+      echo "Deployment or smoke tests failed."
+    }
+  }
+}
