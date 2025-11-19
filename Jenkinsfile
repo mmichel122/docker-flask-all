@@ -36,17 +36,21 @@ pipeline {
 
     stage('Deploy to k3s') {
       steps {
-        sh """
-          echo "Using kubeconfig from Jenkins credentials..."
-          
-          export KUBECONFIG="${K3S_CONFIG}"
+        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KCFG')]) {
+          sh '''
+            echo "Using kubeconfig from Jenkins credentials..."
 
-          kubectl apply -f k8s/
+            export KUBECONFIG="$KCFG"
 
-          kubectl set image deployment/flask-api \
-            flask-api=${REPO_URI}:${GIT_COMMIT} \
-            -n ${K8S_NAMESPACE}
-        """
+            kubectl config get-contexts
+
+            kubectl apply -f k8s/
+
+            kubectl set image deployment/flask-api \
+              flask-api=docker.io/${DOCKER_CREDS_USR}/flask-api-demo:${GIT_COMMIT} \
+              -n demo
+          '''
+        }
       }
     }
   }
