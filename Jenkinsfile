@@ -30,14 +30,12 @@ pipeline {
                     script {
                         echo "Authenticating Docker Hub for buildx…"
 
-                        // 🔥 Ensure buildx uses correct Docker config (fix for insufficient_scope)
                         sh """
                             mkdir -p ~/.docker
-                            echo "{\\"auths\\": {\\"https://index.docker.io/v1/\\": {\\"auth\\": \\"$(echo -n "${DOCKER_USER}:${DOCKER_PASS}" | base64)\\"}}}" > ~/.docker/config.json
+                            echo "{\\"auths\\": {\\"https://index.docker.io/v1/\\": {\\"auth\\": \\"\$(echo -n "${DOCKER_USER}:${DOCKER_PASS}" | base64)\\"}}}" > ~/.docker/config.json
                         """
 
-                        // Info only
-                        sh """echo "Logged in as: ${DOCKER_USER}" """
+                        echo "Logged in as: ${DOCKER_USER}"
 
                         if (env.BRANCH_NAME ==~ /PR-.*/) {
                             echo "Building DEV image for PR branch..."
@@ -55,7 +53,7 @@ pipeline {
 
                         } else if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
 
-                            echo "Building RELEASE image for main/master…"
+                            echo "Building RELEASE image…"
 
                             RELEASE_TAG="${BUILD_NUMBER}"
                             env.RELEASE_TAG = RELEASE_TAG
@@ -86,7 +84,6 @@ pipeline {
                     rm -rf ${GITOPS_REPO}
                     git clone ${GITOPS_URL} ${GITOPS_REPO}
 
-                    # Update the Helm chart image tag
                     sed -i 's/tag: .*/tag: "${RELEASE_TAG}"/' \
                         ${GITOPS_REPO}/charts/fastapi-app/values.yaml
 
