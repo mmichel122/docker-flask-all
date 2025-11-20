@@ -4,8 +4,8 @@ pipeline {
   environment {
     DOCKER_CREDS = credentials('dockerhub-credentials')
 
-    DEV_REPO     = "mmocker06/fastapi-app-dev"
-    RELEASE_REPO = "mmocker06/fastapi-app"
+    DEV_REPO     = "mmdocker06/fastapi-app-dev"
+    RELEASE_REPO = "mmdocker06/fastapi-app"
 
     GITOPS_REPO  = "/tmp/gitops"
     GITOPS_URL   = "https://github.com/mmichel122/argocd-k8s-automation.git"
