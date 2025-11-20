@@ -81,7 +81,7 @@ pipeline {
                     git config user.email "modusmitch@gmail.com"
                     git config user.name "mmichel122"
                     git add .
-                    git commit -m "Update release image tag to ${RELEASE_TAG}"
+                    git commit -m "Pipeline update release image tag to ${RELEASE_TAG}"
                     git push origin main
                 """
             }
