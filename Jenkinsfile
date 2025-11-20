@@ -30,6 +30,7 @@ pipeline {
                     script {
                         echo "Authenticating Docker Hub for buildx…"
 
+                        // 🔥 FIXED VERSION — escaped $(
                         sh """
                             mkdir -p ~/.docker
                             echo "{\\"auths\\": {\\"https://index.docker.io/v1/\\": {\\"auth\\": \\"\$(echo -n "${DOCKER_USER}:${DOCKER_PASS}" | base64)\\"}}}" > ~/.docker/config.json
