@@ -34,25 +34,35 @@ pipeline {
             docker buildx create --use || true
           """
 
-          // PRs → DEV
+          //
+          // PR builds → fastapi-app-dev:pr-##
+          //
           if (env.BRANCH_NAME ==~ /PR-.*/) {
+
+            def DEV_TAG = "pr-${CHANGE_ID}"
 
             sh """
               docker buildx build \
                 --platform linux/amd64 \
+                -t ${DEV_REPO}:${DEV_TAG} \
                 -t ${DEV_REPO}:latest \
                 --push \
                 app
             """
-          }
 
-          // main/master → RELEASE stable + latest
+          } 
+          //
+          // MAIN RELEASE BUILDS → fastapi-app:<BUILD_NUMBER> + latest
+          //
           else if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+
+            def VERSION_TAG = "${BUILD_NUMBER}"
+            env.RELEASE_TAG = VERSION_TAG
 
             sh """
               docker buildx build \
                 --platform linux/amd64 \
-                -t ${RELEASE_REPO}:stable \
+                -t ${RELEASE_REPO}:${VERSION_TAG} \
                 -t ${RELEASE_REPO}:latest \
                 --push \
                 app
@@ -62,24 +72,23 @@ pipeline {
       }
     }
 
-
     stage('Update GitOps Repo') {
       when { branch 'main' }
       steps {
         sh """
-          echo "Updating GitOps Repo…"
+          echo "Updating GitOps Repo with tag ${RELEASE_TAG}"
 
           rm -rf ${GITOPS_REPO}
           git clone ${GITOPS_URL} ${GITOPS_REPO}
 
-          sed -i 's/tag: .*/tag: "stable"/' \
+          sed -i 's/tag: .*/tag: "${RELEASE_TAG}"/' \
             ${GITOPS_REPO}/charts/fastapi-app/values.yaml
 
           cd ${GITOPS_REPO}
           git config user.email "modusmitch@gmail.com"
           git config user.name "mmichel122"
           git add .
-          git commit -m "Pipeline: update stable image tag"
+          git commit -m "Pipeline: update release image tag to ${RELEASE_TAG}"
           git push origin main
         """
       }
