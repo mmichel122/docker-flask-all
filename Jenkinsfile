@@ -79,23 +79,33 @@ pipeline {
           branch 'master'
         }
       }
+
       steps {
-        sh """
-          echo "Updating GitOps Repo with tag ${RELEASE_TAG}"
+          withCredentials([usernamePassword(
+              credentialsId: 'github-creds',
+              usernameVariable: 'GIT_USER',
+              passwordVariable: 'GIT_PAT'
+          )]) {
 
-          rm -rf ${GITOPS_REPO}
-          git clone ${GITOPS_URL} ${GITOPS_REPO}
+              script {
+                  sh """
+                    echo "Updating GitOps Repo with tag ${RELEASE_TAG}"
 
-          sed -i 's/tag: .*/tag: "${RELEASE_TAG}"/' \
-            ${GITOPS_REPO}/charts/fastapi-app/values.yaml
+                    rm -rf ${GITOPS_REPO}
+                    git clone https://${GIT_USER}:${GIT_PAT}@github.com/mmichel122/argocd-k8s-automation.git ${GITOPS_REPO}
 
-          cd ${GITOPS_REPO}
-          git config user.email "modusmitch@gmail.com"
-          git config user.name "mmichel122"
-          git add .
-          git commit -m "Pipeline: update release image tag to ${RELEASE_TAG}"
-          git push origin main
-        """
+                    sed -i 's/tag: .*/tag: "${RELEASE_TAG}"/' \
+                      ${GITOPS_REPO}/charts/fastapi-app/values.yaml
+
+                    cd ${GITOPS_REPO}
+                    git config user.email "modusmitch@gmail.com"
+                    git config user.name "mmichel122"
+                    git add .
+                    git commit -m "Pipeline: update release image tag to ${RELEASE_TAG}"
+                    git push https://${GIT_USER}:${GIT_PAT}@github.com/mmichel122/argocd-k8s-automation.git main
+                  """
+              }
+          }
       }
     }
   }
