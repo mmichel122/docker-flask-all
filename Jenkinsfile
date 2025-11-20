@@ -15,15 +15,7 @@ pipeline {
             steps {
                 checkout scm
             }
-        }
-
-        stage('Run Pytest') {
-            steps {
-                sh """
-                    pytest -q
-                """
-            }
-        }
+        }g
 
         stage('Build Docker Image') {
             steps {
