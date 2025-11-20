@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11'
-            args '-u root:root'
-        }
-    }
+    agent any
 
     environment {
         DEV_REPO       = "mmocker06/fastapi-app-dev"
