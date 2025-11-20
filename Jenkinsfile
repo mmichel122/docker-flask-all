@@ -15,6 +15,7 @@ pipeline {
             steps {
                 checkout scm
             }
+        }
 
         stage('Run Pytest') {
             steps {
