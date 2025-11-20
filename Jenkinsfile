@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.11'
+            args '-u root:root'
+        }
+    }
 
     environment {
         DEV_REPO       = "mmocker06/fastapi-app-dev"
@@ -17,41 +22,45 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
-                sh """
-                    docker build -t ${IMAGE_NAME}:local ./app
-                """
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
-                                                  usernameVariable: 'DOCKER_USER',
-                                                  passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     script {
-
-                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                        echo "Logging in to Docker Hub..."
+                        sh """
+                            echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                        """
 
                         if (env.BRANCH_NAME ==~ /PR-.*/) {
-
-                            echo "Building DEV image for PR..."
-                            DEV_TAG = "pr-${CHANGE_ID}"
+                            DEV_TAG="pr-${CHANGE_ID}"
 
                             sh """
-                                docker tag ${IMAGE_NAME}:local ${DEV_REPO}:${DEV_TAG}
-                                docker push ${DEV_REPO}:${DEV_TAG}
+                                docker buildx create --use || true
+                                docker buildx build \
+                                    --platform linux/amd64 \
+                                    -t ${DEV_REPO}:${DEV_TAG} \
+                                    --push \
+                                    app
                             """
 
                         } else if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
 
-                            echo "Building RELEASE image..."
-                            RELEASE_TAG = "${BUILD_NUMBER}"
+                            RELEASE_TAG="${BUILD_NUMBER}"
 
                             sh """
-                                docker tag ${IMAGE_NAME}:local ${RELEASE_REPO}:${RELEASE_TAG}
-                                docker push ${RELEASE_REPO}:${RELEASE_TAG}
+                                docker buildx create --use || true
+                                docker buildx build \
+                                    --platform linux/amd64 \
+                                    -t ${RELEASE_REPO}:${RELEASE_TAG} \
+                                    -t ${RELEASE_REPO}:latest \
+                                    --push \
+                                    app
                             """
 
                             env.RELEASE_TAG = RELEASE_TAG
