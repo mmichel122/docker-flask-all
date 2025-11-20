@@ -42,7 +42,7 @@ pipeline {
                 --platform linux/amd64 \
                 -t ${DEV_REPO}:latest \
                 --push \
-                .
+                app
             """
           }
 
@@ -55,7 +55,7 @@ pipeline {
                 -t ${RELEASE_REPO}:stable \
                 -t ${RELEASE_REPO}:latest \
                 --push \
-                .
+                app
             """
           }
         }
