@@ -20,10 +20,8 @@ pipeline {
         stage('Install Test Dependencies') {
             steps {
                 sh """
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install -r app/requirements.txt
-                    pip install pytest
+                    pip3 install -r app/requirements.txt
+                    pip3 install pytest
                 """
             }
         }
@@ -31,7 +29,6 @@ pipeline {
         stage('Run Pytest') {
             steps {
                 sh """
-                    . venv/bin/activate
                     pytest -q
                 """
             }
