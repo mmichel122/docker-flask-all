@@ -73,7 +73,12 @@ pipeline {
     }
 
     stage('Update GitOps Repo') {
-      when { branch 'main' }
+      when {
+        anyOf {
+          branch 'main'
+          branch 'master'
+        }
+      }
       steps {
         sh """
           echo "Updating GitOps Repo with tag ${RELEASE_TAG}"
