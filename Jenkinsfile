@@ -15,16 +15,6 @@ pipeline {
             steps {
                 checkout scm
             }
-        }
-
-        stage('Install Test Dependencies') {
-            steps {
-                sh """
-                    pip3 install -r app/requirements.txt
-                    pip3 install pytest
-                """
-            }
-        }
 
         stage('Run Pytest') {
             steps {
