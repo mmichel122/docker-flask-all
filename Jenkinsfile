@@ -15,7 +15,7 @@ pipeline {
             steps {
                 checkout scm
             }
-        }g
+        }
 
         stage('Build Docker Image') {
             steps {
